@@ -1,0 +1,13 @@
+{
+  "name": "stavovy-radek",
+  "owner": {
+    "name": "ruzicka-decoled"
+  },
+  "plugins": [
+    {
+      "name": "stavovy-radek",
+      "source": "./",
+      "description": "Stavový pruh nad políčkem pro zprávu: model, zaplnění okna, odpočet mezipaměti, limity 5 h a týden, projekt, tlačítko compact a volitelný hlídač nečinného okna."
+    }
+  ]
+}

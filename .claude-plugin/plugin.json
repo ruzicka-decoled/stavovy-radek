@@ -1,0 +1,50 @@
+{
+  "name": "stavovy-radek",
+  "version": "0.5.0",
+  "description": "Status band above the prompt: model, context fill, prompt cache countdown, 5-hour and weekly limits (numbers from the app), project, worktree, a compact button and an optional safeguard that compacts an idle window before its cache goes cold",
+  "author": {
+    "name": "ruzicka-decoled",
+    "url": "https://github.com/ruzicka-decoled"
+  },
+  "homepage": "https://github.com/ruzicka-decoled/stavovy-radek",
+  "repository": "https://github.com/ruzicka-decoled/stavovy-radek",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "guard": {
+      "type": "string",
+      "title": "Safeguard before the cache goes cold",
+      "description": "What happens to an idle window whose prompt cache is about to run out: off (nothing), compact (run /compact), flush-then-compact (send the flush text first, run /compact after that turn). Never acts when the cache lifetime is under 30 minutes.",
+      "default": "off",
+      "options": [
+        "off",
+        "compact",
+        "flush-then-compact"
+      ]
+    },
+    "flushText": {
+      "type": "string",
+      "title": "Flush text",
+      "description": "The message sent as your own before the compact in flush-then-compact mode (for example a request to save progress notes). Unused in the other modes.",
+      "default": "compact"
+    },
+    "cacheTtlMinutes": {
+      "type": "number",
+      "title": "Prompt cache lifetime (minutes)",
+      "description": "How long the prompt cache lives after the last activity: 60 on subscriptions, 5 on API-key sessions. The warning colours scale with it.",
+      "default": 60,
+      "min": 1,
+      "max": 1440
+    },
+    "language": {
+      "type": "string",
+      "title": "Language of the labels",
+      "description": "Language of the words on the band (week, turn running, cache cold, compacting).",
+      "default": "cs",
+      "options": [
+        "cs",
+        "en"
+      ]
+    }
+  }
+}
