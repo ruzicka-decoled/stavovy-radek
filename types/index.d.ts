@@ -46,6 +46,11 @@ declare module 'claude-code' {
        */
       contextPercent: number | null
       /**
+       * Size of the context window the percent is counted against, in tokens, as the app's
+       * `get_usage` reports it (`contextWindow`); null when not reported.
+       */
+      contextWindow: number | null
+      /**
        * Rate-limit windows as the app's limits card shows them (the engine's
        * figures only as a backup); empty off a subscription.
        */

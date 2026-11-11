@@ -1,4 +1,4 @@
-# Jak funguje stavový pruh (stavovy-radek 0.5.1)
+# Jak funguje stavový pruh (stavovy-radek 0.5.2)
 
 Tento dokument popisuje do detailu, co pruh dělá, odkud bere čísla a kdy zasáhne. Vychází výhradně ze zdrojového kódu v tomto repozitáři (`hooks/register.tsx`, `hooks/line.ts`, `.claude-plugin/plugin.json`). Stručný úvod pro uživatele je v [README.md](../README.md).
 
@@ -81,7 +81,7 @@ Id modelu bez předpony `claude-` (např. `claude-sonnet-5-5` se ukáže jako `s
 
 ### `ctx` – zaplnění okna
 
-`ctx 42 %` – celé procento, zaokrouhlené **dolů** (aby číslo nikdy nerozporovalo barvu). Barva:
+`ctx 42 % / 400k` – celé procento, zaokrouhlené **dolů** (aby číslo nikdy nerozporovalo barvu), a za lomítkem velikost okna, ze kterého aplikace procento počítá. Velikost je pole `contextWindow` z odpovědi aplikace `get_usage` (sekce `context`, vedle `percentUsed`); je to **nastavená** velikost okna, ne největší okno modelu. Formát: pod 1000 celé číslo, tisíce `k` zaokrouhlené na celé (`400k`, `200k`), miliony `M` (`1M`, `1.5M`). Když aplikace velikost nehlásí (chybí, není číslo, je nulová či záporná), nebo když procento pochází z enginu (záložní zdroj, počítá se proti oknu modelu), zůstane jen `ctx 42 %`. Barva:
 
 | Zaplnění | Barva |
 | --- | --- |
@@ -89,7 +89,7 @@ Id modelu bez předpony `claude-` (např. `claude-sonnet-5-5` se ukáže jako `s
 | od 50 % do 80 % | žlutá |
 | od 80 % | červená |
 
-Dokud není hodnota známa, je tam tlumené `ctx –`. Z aplikace se hodnota omezí shora na 100.
+Dokud není procento známo, je tam tlumené `ctx –` (bez velikosti). Z aplikace se hodnota omezí shora na 100.
 
 ### `cache` – mezipaměť
 
@@ -355,7 +355,7 @@ Kontrola kódu pluginu: `claude plugin validate`.
 ```
 stavovy-radek/
 ├── .claude-plugin/
-│   ├── plugin.json         Manifest pluginu: název, verze 0.5.1, autor, licence a 4 nastavení (userConfig).
+│   ├── plugin.json         Manifest pluginu: název, verze 0.5.2, autor, licence a 4 nastavení (userConfig).
 │   └── marketplace.json    Zdroj pluginů (marketplace) s jediným pluginem, který leží v kořeni repozitáře.
 ├── hooks/
 │   ├── hooks.json          Ohlašuje hooks modul register.tsx.
@@ -373,6 +373,7 @@ stavovy-radek/
 
 ## 13. Verze
 
-Aktuální verze je **0.5.1** (`.claude-plugin/plugin.json`). Dřívější verze zdroj nepopisuje.
+Aktuální verze je **0.5.2** (`.claude-plugin/plugin.json`). Dřívější verze zdroj nepopisuje.
 
+- 0.5.2 – u ctx velikost okna
 - 0.5.1 – tlačítko compact od 50 %, při konci mezipaměti tlačítko i hlídač bez ohledu na zaplnění

@@ -1722,7 +1722,7 @@ describe('numbers from the app', () => {
     const w = world({ app: appUsage() })
     await boot($, on, w)
     const ui = await mountBand($)
-    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 %')
+    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 % / 400k')
     expect((await leaf(ui, /týden/))?.text).toBe('týden 22 %↑ · 5d 11h')
     // the engine's 5 h window (and its ctx 18 %) are not shown while the app's reading is fresh
     expect(await ui.find({ text: /5h/ })).toBeUndefined()
@@ -1741,11 +1741,35 @@ describe('numbers from the app', () => {
     await ui.unmount()
   })
 
+  test('the size of the window comes with the app figure and goes when the engine takes over (v0.5.2)', async ($, on) => {
+    const w = world({ app: appUsage() })
+    const clock = await boot($, on, w)
+    let ui = await mountBand($)
+    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 % / 400k')
+    await ui.unmount()
+
+    w.app = null
+    await clock.advance(6 * MINUTE)
+    ui = await mountBand($)
+    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 18 %')
+    await ui.unmount()
+  })
+
+  test('an app reply without a window size shows the percent alone (v0.5.2)', async ($, on) => {
+    const app = appUsage()
+    const body = JSON.parse((app.content[0] as { text: string }).text)
+    delete body.context.contextWindow
+    await boot($, on, world({ app: { content: [{ type: 'text', text: JSON.stringify(body) }], isError: false } }))
+    const ui = await mountBand($)
+    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 %')
+    await ui.unmount()
+  })
+
   test('the context colour follows the app figure', async ($, on) => {
     await boot($, on, world({ app: appUsage({ contextPercent: 92 }) }))
     const ui = await mountBand($)
     const segment = await leaf(ui, /ctx/)
-    expect(segment?.text).toBe('ctx 92 %')
+    expect(segment?.text).toBe('ctx 92 % / 400k')
     expect(segment?.props['color']).toBe('error')
     await ui.unmount()
   })
@@ -1782,7 +1806,7 @@ describe('numbers from the app', () => {
       changed: ['context', 'rateLimits'],
     })
     const ui = await mountBand($)
-    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 %')
+    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 % / 400k')
     expect(await ui.find({ text: /5h/ })).toBeUndefined()
     expect((await leaf(ui, /týden/))?.text).toBe('týden 22 %↑ · 5d 11h')
     await ui.unmount()
@@ -1795,7 +1819,7 @@ describe('numbers from the app', () => {
 
     await clock.advance(4 * MINUTE)
     let ui = await mountBand($)
-    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 %')
+    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 % / 400k')
     await ui.unmount()
 
     await clock.advance(90 * 1000) // 5 min 30 s after the last good reading
@@ -1858,7 +1882,7 @@ describe('numbers from the app', () => {
     await turnDone($)
     await clock.settle()
     const ui = await mountBand($)
-    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 83 %')
+    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 83 % / 400k')
     await ui.unmount()
   })
 
@@ -1869,7 +1893,7 @@ describe('numbers from the app', () => {
     await turnDone($)
     await clock.settle()
     const ui = await mountBand($)
-    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 %')
+    expect((await leaf(ui, /ctx/))?.text).toBe('ctx 77 % / 400k')
     expect((await leaf(ui, /týden/))?.text).toBe('týden 22 %↑ · 5d 11h')
     await ui.unmount()
   })

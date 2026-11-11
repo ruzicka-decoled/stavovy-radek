@@ -2,20 +2,20 @@
 
 Stavový pruh nad políčkem, do kterého píšete Claudovi. Na jednom řádku ukáže, kolik máte zbývající paměti okna, jak dlouho ještě platí mezipaměť rozhovoru a kolik už jste vyčerpali z limitů.
 
-Verze 0.5.1 · licence MIT · jen pruh, nic dalšího.
+Verze 0.5.2 · licence MIT · jen pruh, nic dalšího.
 
 ## Co to je
 
 Malý doplněk (plugin, též „mod") pro Claude Code. Nad políčkem pro zprávu přibude pruh, například:
 
 ```
-fable-5-2 │ ctx 42 % │ cache 37 min │ týden 36 % · 5d 3h │ projekt │ → /compact
+fable-5-2 │ ctx 42 % / 400k │ cache 37 min │ týden 36 % · 5d 3h │ projekt │ → /compact
 ```
 
 | Část | Co znamená | Barvy |
 | --- | --- | --- |
 | `fable-5-2` | Model, se kterým právě mluvíte. | tlumená |
-| `ctx 42 %` | Kolik procent okna rozhovoru je zaplněno. | zelená do 50 %, žlutá do 80 %, červená od 80 % |
+| `ctx 42 % / 400k` | Kolik procent okna rozhovoru je zaplněno a jak velké je okno, ze kterého se procento počítá (nastavená velikost, například `400k` nebo `1M`). Když velikost aplikace nehlásí, je tam jen procento. | zelená do 50 %, žlutá do 80 %, červená od 80 % |
 | `cache 37 min` | Kolik minut ještě platí mezipaměť rozhovoru. Dokud je platná, Claude nemusí číst celý rozhovor znovu, takže je to levnější a rychlejší. Když zrovna běží odpověď, je za číslem poznámka `tah běží`. | zelená nad 25 minut, žlutá od 25 níž, červená od 10 níž, červeně „cache studená“ po vypršení (při jiné životnosti se hranice přepočítají ve stejném poměru) |
 | `týden 36 % · 5d 3h` | Kolik procent týdenního limitu je využito a za jak dlouho se obnoví. Když čerpáte rychleji, než plyne čas, objeví se šipka `↑`. Stejně se ukáže i limit za posledních 5 hodin (`5h`) a případně týdenní limit jednotlivého modelu. | podle míry využití (jako `ctx`) |
 | `projekt` | Název složky, ve které pracujete (u pracovního stromu gitu ještě `wt` a název). Je-li to repozitář z GitHubu, je název odkaz na něj. | |

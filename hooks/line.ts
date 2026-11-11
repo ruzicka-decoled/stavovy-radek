@@ -39,6 +39,8 @@ export type LineRateLimit = {
 export type LineInput = {
   model: string | null
   contextPercent: number | null
+  /** The size of the window the context percent is counted against (tokens), or null/absent when unknown. */
+  contextWindow?: number | null
   rateLimits: readonly LineRateLimit[]
   lastActivityMs: number | null
   nowMs: number | null
@@ -66,6 +68,8 @@ export type AppUsage = {
   windows: LineRateLimit[]
   /** 0 to 100, the figure auto-compact is counted against; null when not reported. */
   contextPercent: number | null
+  /** Tokens, the size of the window the percent is counted against; null when not reported. */
+  contextWindow: number | null
 }
 
 export const MINUTE_MS = 60 * 1000
@@ -494,14 +498,31 @@ export function shortModelName(model: string): string {
   return short === '' ? model : short
 }
 
-/** Context segment; "ctx –" (dim) while the fill is not known yet. */
-export function contextSegment(percent: number | null): Segment {
+/**
+ * A token count for the band: under 1000 the whole number, thousands as "k" (1500 is "2k"),
+ * millions as "M" with one decimal only when needed ("1M", "1.5M"). Null for anything that is
+ * not a positive finite number.
+ */
+export function formatTokens(tokens: number): string | null {
+  if (typeof tokens !== 'number' || !Number.isFinite(tokens) || tokens <= 0) return null
+  if (tokens < 1000) return String(Math.round(tokens))
+  if (tokens < 999500) return `${Math.round(tokens / 1000)}k`
+  const millions = Math.round((tokens / 1000000) * 10) / 10
+  return `${Number.isInteger(millions) ? millions : millions.toFixed(1)}M`
+}
+
+/**
+ * Context segment: "ctx 81 % / 400k" (percent and the size of the window it is counted against);
+ * without a known size "ctx 81 %"; "ctx –" (dim) while the fill is not known yet.
+ */
+export function contextSegment(percent: number | null, windowTokens: number | null = null): Segment {
   if (percent === null || !Number.isFinite(percent)) {
     return { key: 'context', text: 'ctx –', isDim: true }
   }
+  const size = windowTokens === null ? null : formatTokens(windowTokens)
   return {
     key: 'context',
-    text: `ctx ${wholePercent(percent)} %`,
+    text: `ctx ${wholePercent(percent)} %${size === null ? '' : ` / ${size}`}`,
     tone: toneForPercent(percent),
   }
 }
@@ -630,7 +651,7 @@ export function kindOfAppLabel(label: string): string | null {
  * `resetsAt` is kept as the ISO text when `parseIso` accepts it, else null.
  */
 export function parseAppUsage(text: string): AppUsage {
-  const result: AppUsage = { windows: [], contextPercent: null }
+  const result: AppUsage = { windows: [], contextPercent: null, contextWindow: null }
   let data: unknown
   try {
     data = JSON.parse(text)
@@ -665,6 +686,8 @@ export function parseAppUsage(text: string): AppUsage {
     if (typeof percent === 'number' && Number.isFinite(percent) && percent >= 0) {
       result.contextPercent = Math.min(100, percent)
     }
+    const size = context['contextWindow']
+    if (typeof size === 'number' && Number.isFinite(size) && size > 0) result.contextWindow = size
   }
   return result
 }
@@ -735,7 +758,7 @@ export function buildSegments(input: LineInput): Segment[] {
   if (input.model !== null && input.model !== '') {
     segments.push({ key: 'model', text: shortModelName(input.model), isDim: true })
   }
-  segments.push(contextSegment(input.contextPercent))
+  segments.push(contextSegment(input.contextPercent, input.contextWindow ?? null))
 
   segments.push(cacheSegment(input.lastActivityMs, nowMs, input.isTurnRunning === true, settings))
 

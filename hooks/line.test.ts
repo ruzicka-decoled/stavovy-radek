@@ -29,6 +29,7 @@ import {
   labelsFor,
   limitSegments,
   parseAppUsage,
+  formatTokens,
   parseIso,
   readSettings,
   shortModelName,
@@ -431,6 +432,43 @@ describe('isGuardDue (the safeguard before the cache runs out)', () => {
   })
 })
 
+describe('formatTokens (v0.5.2)', () => {
+  test('under 1000 whole, thousands as k, millions as M', () => {
+    expect(formatTokens(999)).toBe('999')
+    expect(formatTokens(1500)).toBe('2k')
+    expect(formatTokens(200000)).toBe('200k')
+    expect(formatTokens(322024)).toBe('322k')
+    expect(formatTokens(400000)).toBe('400k')
+    expect(formatTokens(1000000)).toBe('1M')
+    expect(formatTokens(1500000)).toBe('1.5M')
+    expect(formatTokens(999600)).toBe('1M')
+  })
+
+  test('nothing sensible gives null', () => {
+    expect(formatTokens(0)).toBeNull()
+    expect(formatTokens(-1)).toBeNull()
+    expect(formatTokens(Number.NaN)).toBeNull()
+    expect(formatTokens(Number.POSITIVE_INFINITY)).toBeNull()
+  })
+})
+
+describe('contextSegment with the window size (v0.5.2)', () => {
+  test('percent and the size of the window', () => {
+    expect(contextSegment(81, 400000)).toEqual({ key: 'context', text: 'ctx 81 % / 400k', tone: 'error' })
+    expect(contextSegment(18, 1000000)).toEqual({ key: 'context', text: 'ctx 18 % / 1M', tone: 'success' })
+  })
+
+  test('without a usable size the text is as before', () => {
+    expect(contextSegment(81, null).text).toBe('ctx 81 %')
+    expect(contextSegment(81, 0).text).toBe('ctx 81 %')
+    expect(contextSegment(81).text).toBe('ctx 81 %')
+  })
+
+  test('an unknown fill stays a dash whatever the size', () => {
+    expect(contextSegment(null, 400000)).toEqual({ key: 'context', text: 'ctx –', isDim: true })
+  })
+})
+
 describe('contextSegment', () => {
   test('percent with colour at the boundaries', () => {
     expect(contextSegment(18)).toEqual({ key: 'context', text: 'ctx 18 %', tone: 'success' })
@@ -632,6 +670,13 @@ describe('buildSegments', () => {
     expect(other.find((s) => s.key === 'project')?.href).toBeUndefined()
     const none = buildSegments({ ...FULL, remote: null })
     expect(none.find((s) => s.key === 'project')?.href).toBeUndefined()
+  })
+
+  test('the band takes the size from the input', () => {
+    const withSize = buildSegments({ ...FULL, contextWindow: 400000 }).find((x) => x.key === 'context')
+    expect(withSize?.text).toMatch(/ \/ 400k$/)
+    const without = buildSegments({ ...FULL, contextWindow: null }).find((x) => x.key === 'context')
+    expect(without?.text).not.toContain('/')
   })
 
   test('before the first refresh there is nothing to show', () => {
@@ -848,6 +893,7 @@ describe('parseAppUsage', () => {
         { kind: 'seven_day:Fable', percentUsed: 0, resetsAt: '2026-11-16T00:00:00.000Z' },
       ],
       contextPercent: 77,
+      contextWindow: 400000,
     })
   })
 
@@ -857,7 +903,7 @@ describe('parseAppUsage', () => {
         plan: { status },
         context: { status: 'ok', percentUsed: 31 },
       })
-      expect(parseAppUsage(text)).toEqual({ windows: [], contextPercent: 31 })
+      expect(parseAppUsage(text)).toEqual({ windows: [], contextPercent: 31, contextWindow: null })
     }
   })
 
@@ -869,11 +915,32 @@ describe('parseAppUsage', () => {
     expect(parseAppUsage(text)).toEqual({
       windows: [{ kind: 'five_hour', percentUsed: 41, resetsAt: null }],
       contextPercent: null,
+      contextWindow: null,
     })
   })
 
+  test('the window size (v0.5.2): a positive number is kept, anything else is ignored', () => {
+    const parse = (size: unknown) =>
+      parseAppUsage(
+        JSON.stringify({ context: { status: 'ok', percentUsed: 50, contextWindow: size } }),
+      ).contextWindow
+    expect(parse(400000)).toBe(400000)
+    expect(parse(1000000)).toBe(1000000)
+    expect(parse(undefined)).toBeNull()
+    expect(parse('400000')).toBeNull()
+    expect(parse(null)).toBeNull()
+    expect(parse(-5)).toBeNull()
+    expect(parse(0)).toBeNull()
+    expect(parse(Number.NaN)).toBeNull()
+    // not reported when the context is not ok
+    expect(
+      parseAppUsage(JSON.stringify({ context: { status: 'unavailable', contextWindow: 400000 } }))
+        .contextWindow,
+    ).toBeNull()
+  })
+
   test('broken or foreign JSON gives nothing', () => {
-    const none = { windows: [], contextPercent: null }
+    const none = { windows: [], contextPercent: null, contextWindow: null }
     expect(parseAppUsage('')).toEqual(none)
     expect(parseAppUsage('{"plan":')).toEqual(none)
     expect(parseAppUsage('not json')).toEqual(none)

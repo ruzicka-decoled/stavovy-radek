@@ -23,7 +23,7 @@ import type { CompactState, LineInput, Segment, Settings } from './line'
 // command, so a status line configured there is never drawn in the app.
 //
 // One band above the prompt (ui.render on AbovePrompt):
-//   model | ctx 77 % | cache 18 min | 5h 41 %^ . 2h 13m | week 22 %^ . 5d 11h
+//   model | ctx 77 % / 400k | cache 18 min | 5h 41 %^ . 2h 13m | week 22 %^ . 5d 11h
 //   | Fable wk 12 %^ | project | wt name
 // The render hook only READS atoms (writing $.state while drawing is refused).
 // Several writers fill them: session.measure (engine context + limits, and the last activity
@@ -66,6 +66,7 @@ const APP_TOOL = 'get_usage'
 
 const modelAtom = atom({ plugin: 'stavovy-radek', key: 'model' } as const, null)
 const contextAtom = atom({ plugin: 'stavovy-radek', key: 'contextPercent' } as const, null)
+const contextWindowAtom = atom({ plugin: 'stavovy-radek', key: 'contextWindow' } as const, null)
 const limitsAtom = atom({ plugin: 'stavovy-radek', key: 'rateLimits' } as const, [])
 const lastAtom = atom({ plugin: 'stavovy-radek', key: 'lastActivityMs' } as const, null)
 const nowAtom = atom({ plugin: 'stavovy-radek', key: 'nowMs' } as const, null)
@@ -93,6 +94,9 @@ async function setModel($: EngineInterface, value: string | null): Promise<void>
 }
 async function setContext($: EngineInterface, value: number | null): Promise<void> {
   if (!same(await read($, contextAtom), value)) await update($, contextAtom, () => value)
+}
+async function setContextWindow($: EngineInterface, value: number | null): Promise<void> {
+  if (!same(await read($, contextWindowAtom), value)) await update($, contextWindowAtom, () => value)
 }
 async function setLimits($: EngineInterface, value: StavovyRadekRateLimit[]): Promise<void> {
   if (!same(await read($, limitsAtom), value)) await update($, limitsAtom, () => value)
@@ -138,6 +142,7 @@ async function loadInput($: EngineInterface, settings: Settings): Promise<LineIn
   const [
     model,
     contextPercent,
+    contextWindow,
     rateLimits,
     lastActivityMs,
     nowMs,
@@ -149,6 +154,7 @@ async function loadInput($: EngineInterface, settings: Settings): Promise<LineIn
   ] = await Promise.all([
     read($, modelAtom),
     read($, contextAtom),
+    read($, contextWindowAtom),
     read($, limitsAtom),
     read($, lastAtom),
     read($, nowAtom),
@@ -161,6 +167,7 @@ async function loadInput($: EngineInterface, settings: Settings): Promise<LineIn
   return {
     model,
     contextPercent,
+    contextWindow,
     rateLimits,
     lastActivityMs,
     nowMs,
@@ -449,6 +456,7 @@ async function writeDiag($: EngineInterface, settings: Settings): Promise<void> 
         mcpError: appError,
         windows: input.rateLimits,
         contextPercent: input.contextPercent,
+        contextWindow: input.contextWindow ?? null,
         hasRemote: input.remote !== null && input.remote !== '',
         isWorktree: input.isWorktree,
         lastActivityMs: input.lastActivityMs,
@@ -499,7 +507,11 @@ async function storeEngineUsage(
   } catch {
     nowMs = null
   }
-  if (nowMs === null || !isFresh(appContextReadMs, nowMs)) await setContext($, percent ?? null)
+  if (nowMs === null || !isFresh(appContextReadMs, nowMs)) {
+    await setContext($, percent ?? null)
+    // The engine's percent is against the model's window, not the app's setting: no size is shown.
+    await setContextWindow($, null)
+  }
   if (nowMs === null || !isFresh(appLimitsReadMs, nowMs)) {
     await setLimits($, normalizeLimits(limits))
   }
@@ -532,6 +544,8 @@ async function refreshAppUsage($: EngineInterface): Promise<void> {
     }
     if (usage.contextPercent !== null) {
       await setContext($, usage.contextPercent)
+      // The size is the app's setting; a reply without it clears an old one (the segment drops it).
+      await setContextWindow($, usage.contextWindow)
       appContextReadMs = nowMs
       isUsable = true
     }
