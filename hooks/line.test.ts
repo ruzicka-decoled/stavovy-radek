@@ -320,9 +320,9 @@ describe('cacheSegment', () => {
 })
 
 describe('compactSegment', () => {
-  test('context 70 % or more: yellow hint, red from 80', () => {
-    expect(compactSegment(69.9, null, NOW)).toBeNull()
-    expect(compactSegment(70, null, NOW)).toEqual({
+  test('context 50 % or more: yellow hint, red from 80', () => {
+    expect(compactSegment(49.9, null, NOW)).toBeNull()
+    expect(compactSegment(50, null, NOW)).toEqual({
       key: 'compact',
       text: '→ /compact',
       tone: 'warning',
@@ -333,16 +333,21 @@ describe('compactSegment', () => {
     expect(compactSegment(100, null, NOW)?.tone).toBe('error')
   })
 
-  test('cache nearly cold and the context at least 30 %: yellow hint', () => {
-    expect(compactSegment(30, lastWithLeftMinutes(10), NOW)).toEqual({
+  test('49 % with the cache far from its end: no hint; 50 %: hint', () => {
+    expect(compactSegment(49, lastWithLeftMinutes(40), NOW)).toBeNull()
+    expect(compactSegment(50, lastWithLeftMinutes(40), NOW)?.action).toBe('compact')
+  })
+
+  test('cache nearly cold: yellow hint at any known context fill (even 3 %)', () => {
+    expect(compactSegment(3, lastWithLeftMinutes(10), NOW)).toEqual({
       key: 'compact',
       text: '→ /compact',
       tone: 'warning',
       action: 'compact',
     })
-    expect(compactSegment(30, lastWithLeftMinutes(11), NOW)).toBeNull()
-    expect(compactSegment(30, lastWithLeftMinutes(-20), NOW)?.text).toBe('→ /compact')
-    expect(compactSegment(29.9, lastWithLeftMinutes(5), NOW)).toBeNull()
+    expect(compactSegment(3, lastWithLeftMinutes(11), NOW)).toBeNull()
+    expect(compactSegment(3, lastWithLeftMinutes(-20), NOW)?.text).toBe('→ /compact')
+    expect(compactSegment(0, lastWithLeftMinutes(5), NOW)?.action).toBe('compact')
   })
 
   test('no hint while a turn runs on the cache rule, but the context rule still holds', () => {
@@ -352,7 +357,7 @@ describe('compactSegment', () => {
 
   test('every hint is a button (action compact), and no other segment is', () => {
     expect(compactSegment(95, null, NOW)?.action).toBe('compact')
-    expect(compactSegment(30, lastWithLeftMinutes(5), NOW)?.action).toBe('compact')
+    expect(compactSegment(3, lastWithLeftMinutes(5), NOW)?.action).toBe('compact')
     const segments = buildSegments({
       model: 'claude-test-model',
       contextPercent: 85,
@@ -377,7 +382,12 @@ describe('compactSegment', () => {
   test('unknown context or unknown last activity: no hint on the rule that needs it', () => {
     expect(compactSegment(null, lastWithLeftMinutes(5), NOW)).toBeNull()
     expect(compactSegment(Number.NaN, null, NOW)).toBeNull()
-    expect(compactSegment(50, null, NOW)).toBeNull()
+    expect(compactSegment(49, null, NOW)).toBeNull()
+  })
+
+  test('unknown context (null): no hint even when the cache is nearly cold', () => {
+    expect(compactSegment(null, lastWithLeftMinutes(5), NOW)).toBeNull()
+    expect(compactSegment(null, lastWithLeftMinutes(-20), NOW)).toBeNull()
   })
 })
 
@@ -387,7 +397,7 @@ describe('isGuardDue (the safeguard before the cache runs out)', () => {
     expect(DEFAULT_FLUSH_TEXT).toBe('compact')
   })
 
-  test('due from 10 minutes of cache left down to 2, with a context of 30 % or more', () => {
+  test('due from 10 minutes of cache left down to 2, at any context fill', () => {
     expect(isGuardDue(40, lastWithLeftMinutes(11), NOW)).toBe(false)
     expect(isGuardDue(40, lastWithLeftMinutes(10), NOW)).toBe(true)
     expect(isGuardDue(40, lastWithLeftMinutes(5), NOW)).toBe(true)
@@ -400,9 +410,10 @@ describe('isGuardDue (the safeguard before the cache runs out)', () => {
     expect(isGuardDue(40, lastWithLeftMinutes(-20), NOW)).toBe(false)
   })
 
-  test('not below 30 % of the context, and exactly 30 % counts', () => {
-    expect(isGuardDue(29.9, lastWithLeftMinutes(5), NOW)).toBe(false)
-    expect(isGuardDue(30, lastWithLeftMinutes(5), NOW)).toBe(true)
+  test('a small context fill (3 %, even 0 %) is due as well', () => {
+    expect(isGuardDue(3, lastWithLeftMinutes(5), NOW)).toBe(true)
+    expect(isGuardDue(0, lastWithLeftMinutes(5), NOW)).toBe(true)
+    expect(isGuardDue(3, lastWithLeftMinutes(11), NOW)).toBe(false)
   })
 
   test('not while a turn runs', () => {

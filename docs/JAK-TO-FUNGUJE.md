@@ -1,4 +1,4 @@
-# Jak funguje stavový pruh (stavovy-radek 0.5.0)
+# Jak funguje stavový pruh (stavovy-radek 0.5.1)
 
 Tento dokument popisuje do detailu, co pruh dělá, odkud bere čísla a kdy zasáhne. Vychází výhradně ze zdrojového kódu v tomto repozitáři (`hooks/register.tsx`, `hooks/line.ts`, `.claude-plugin/plugin.json`). Stručný úvod pro uživatele je v [README.md](../README.md).
 
@@ -144,8 +144,8 @@ Zhuštění (compact) shrne starší část rozhovoru, uvolní místo v okně a 
 
 ### Kdy se tlačítko `→ /compact` ukáže
 
-1. Zaplnění okna je **70 % nebo víc** (žlutá, od 80 % červená). Důvod z komentáře: aplikace sama zhušťuje u 92 %, a ruční zhuštění dřív nechává místo.
-2. Nebo **současně**: žádný tah neběží, poslední aktivita je známa, zaplnění je aspoň **30 %** a mezipaměti zbývá tolik, co je červený práh (10 z 60 minut), nebo méně, včetně „studená“. Zhuštění teď zlevní příští zprávu po studené mezipaměti (žlutá).
+1. Zaplnění okna je **50 % nebo víc** (žlutá, od 80 % červená). Důvod z komentáře: aplikace sama zhušťuje u 92 %, a ruční zhuštění dřív nechává místo.
+2. Nebo **současně**: žádný tah neběží, poslední aktivita je známa, zaplnění je známé (na jeho výši nezáleží, stačí i pár procent) a mezipaměti zbývá tolik, co je červený práh (10 z 60 minut), nebo méně, včetně „studená“. Zhuštění teď zlevní příští zprávu po studené mezipaměti (žlutá).
 
 Jinak tlačítko chybí. Zaplnění neznámé = bez tlačítka. Tlačítko je vždy poslední a nemá oddělovač (na úzkém pruhu se zalomí na vlastní řádek).
 
@@ -194,7 +194,7 @@ Hlídač jedná, jen když platí všechno:
 3. Neprobíhá zhuštění (`compactState` není `running`).
 4. Neběží tah.
 5. Poslední aktivita je známa (okno, které mod potkal uprostřed nečinnosti, nikdy nevyhovuje).
-6. Zaplnění okna je aspoň **30 %**.
+6. Zaplnění okna je známé. Na jeho výši nezáleží, hlídač jedná i při několika procentech.
 7. Mezipaměti zbývá **nejvýš červený práh a aspoň 2 minuty** (při životnosti 60 min tedy 10 až 2 minuty, tj. přibližně 50. až 58. minuta nečinnosti).
 8. Hlídač je „natažený“ (`guardArmed`). Po spuštění se uvolní a natáhne se znovu **až vaší další zprávou**. Okno, ke kterému se nikdo nevrací, se tedy ošetří jednou, ne každou hodinu celou noc.
 
@@ -343,7 +343,7 @@ Důsledek pro tento mod: háček `session.compact` (stav „compactuji…“ př
 | U limitů je pomlčka | Aplikace zatím nemá čísla; obvykle se objeví po první odpovědi. |
 | `cache –` | Mod nezná poslední aktivitu okna; po první zprávě se údaj doplní. |
 | Chybí tlačítko `→ /compact` | Zatím není potřeba (podmínky v oddíle 5). |
-| Hlídač nejedná | Zkontrolovat `guard`, že `cacheTtlMinutes` je aspoň 30, že zaplnění je aspoň 30 % a že se po něm už nepsalo (oddíl 6). |
+| Hlídač nejedná | Zkontrolovat `guard`, že `cacheTtlMinutes` je aspoň 30, že je zaplnění známé a že se po něm už nepsalo (oddíl 6). |
 | Plugin je zapnutý v nastavení projektu, ale není nainstalovaný | Spustit `claude plugin install stavovy-radek@stavovy-radek --scope project` (oddíl 10). |
 
 Kontrola kódu pluginu: `claude plugin validate`.
@@ -355,7 +355,7 @@ Kontrola kódu pluginu: `claude plugin validate`.
 ```
 stavovy-radek/
 ├── .claude-plugin/
-│   ├── plugin.json         Manifest pluginu: název, verze 0.5.0, autor, licence a 4 nastavení (userConfig).
+│   ├── plugin.json         Manifest pluginu: název, verze 0.5.1, autor, licence a 4 nastavení (userConfig).
 │   └── marketplace.json    Zdroj pluginů (marketplace) s jediným pluginem, který leží v kořeni repozitáře.
 ├── hooks/
 │   ├── hooks.json          Ohlašuje hooks modul register.tsx.
@@ -373,4 +373,6 @@ stavovy-radek/
 
 ## 13. Verze
 
-Aktuální verze je **0.5.0** (`.claude-plugin/plugin.json`). Dřívější verze zdroj nepopisuje.
+Aktuální verze je **0.5.1** (`.claude-plugin/plugin.json`). Dřívější verze zdroj nepopisuje.
+
+- 0.5.1 – tlačítko compact od 50 %, při konci mezipaměti tlačítko i hlídač bez ohledu na zaplnění

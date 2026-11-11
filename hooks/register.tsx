@@ -319,7 +319,7 @@ async function releaseCompactHold($: EngineInterface): Promise<void> {
 /**
  * The safeguard, step 1, called from the tick; it does nothing in mode `off` (the default) and
  * whenever the cache lives under 30 minutes. A window left alone until the prompt cache has
- * little left (10 of 60 minutes, and at least 2), with a context of 30 % or more, is dealt with
+ * little left (10 of 60 minutes, and at least 2), whatever the context fill, is dealt with
  * before the cache goes cold:
  *  - mode `compact`: the real `/compact` runs at once;
  *  - mode `flush-then-compact`: the flush text is submitted as the person's own message (the

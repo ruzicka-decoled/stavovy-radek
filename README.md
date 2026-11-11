@@ -2,7 +2,7 @@
 
 Stavový pruh nad políčkem, do kterého píšete Claudovi. Na jednom řádku ukáže, kolik máte zbývající paměti okna, jak dlouho ještě platí mezipaměť rozhovoru a kolik už jste vyčerpali z limitů.
 
-Verze 0.5.0 · licence MIT · jen pruh, nic dalšího.
+Verze 0.5.1 · licence MIT · jen pruh, nic dalšího.
 
 ## Co to je
 
@@ -19,7 +19,7 @@ fable-5-2 │ ctx 42 % │ cache 37 min │ týden 36 % · 5d 3h │ projekt │
 | `cache 37 min` | Kolik minut ještě platí mezipaměť rozhovoru. Dokud je platná, Claude nemusí číst celý rozhovor znovu, takže je to levnější a rychlejší. Když zrovna běží odpověď, je za číslem poznámka `tah běží`. | zelená nad 25 minut, žlutá od 25 níž, červená od 10 níž, červeně „cache studená“ po vypršení (při jiné životnosti se hranice přepočítají ve stejném poměru) |
 | `týden 36 % · 5d 3h` | Kolik procent týdenního limitu je využito a za jak dlouho se obnoví. Když čerpáte rychleji, než plyne čas, objeví se šipka `↑`. Stejně se ukáže i limit za posledních 5 hodin (`5h`) a případně týdenní limit jednotlivého modelu. | podle míry využití (jako `ctx`) |
 | `projekt` | Název složky, ve které pracujete (u pracovního stromu gitu ještě `wt` a název). Je-li to repozitář z GitHubu, je název odkaz na něj. | |
-| `→ /compact` | Tlačítko. Objeví se, když je okno zaplněné na 70 % a více, nebo když mezipaměť brzy vyprší a okno je zaplněné aspoň z 30 %. Kliknutím se spustí zhuštění rozhovoru (příkaz `/compact`). | žlutá nebo červená |
+| `→ /compact` | Tlačítko. Objeví se, když je okno zaplněné na 50 % a více, nebo když mezipaměť brzy vyprší (bez ohledu na to, kolik procent okna je zaplněno). Kliknutím se spustí zhuštění rozhovoru (příkaz `/compact`). | žlutá nebo červená |
 
 Část, pro kterou zrovna není číslo, se ukáže jako pomlčka nebo se vynechá.
 
@@ -91,7 +91,7 @@ Možnosti změníte v okně Claude Code příkazem `/plugin`: otevřete detail p
 
 Ve výchozím stavu je vypnutý. Pruh sám nic nespouští, jen ukazuje čísla a tlačítko.
 
-- `compact`: když necháte okno ležet, mezipaměť má před vypršením 10 minut nebo méně a okno je zaplněné aspoň z 30 %, pruh sám spustí zhuštění rozhovoru. Udělá to jednou za vaši nepřítomnost.
+- `compact`: když necháte okno ležet, mezipaměť má před vypršením 10 minut nebo méně (bez ohledu na zaplnění okna), pruh sám spustí zhuštění rozhovoru. Udělá to jednou za vaši nepřítomnost.
 - `flush-then-compact`: nejdřív pošle jako vy krátkou zprávu (text z `flushText`), aby si váš projekt mohl podle svých pokynů uložit poznámky, a potom zhustí rozhovor. Má smysl jen tehdy, když váš projekt na tu zprávu reaguje. Jinak použijte `compact`.
 
 ## Co pruh dělá a co ne

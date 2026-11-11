@@ -407,16 +407,15 @@ export function cacheSegment(
 }
 
 /** The compact hint appears from this context fill (percent as the app counts it) ... */
-export const COMPACT_CONTEXT_PERCENT = 70
-/** ... or when the cache is nearly cold (red threshold) and the context is at least this full. */
-export const COMPACT_CACHE_MIN_CONTEXT = 30
+export const COMPACT_CONTEXT_PERCENT = 50
 
 /**
  * The hint "→ /compact", last on the line, or null when no compact is due:
- *  - the context is filled to 70 % or more (yellow, red from 80 like the context itself):
+ *  - the context is filled to 50 % or more (yellow, red from 80 like the context itself):
  *    the app auto-compacts at 92 %, and a compact started by hand leaves room for the flush;
- *  - no turn runs, the cache has its red-threshold minutes or fewer left (or is cold; 10 of 60)
- *    and the context is 30 % or more: a compact now makes the next, cold-cache turn cheap.
+ *  - no turn runs and the cache has its red-threshold minutes or fewer left (or is cold; 10 of 60),
+ *    whatever the context fill (as long as it is known): a compact now makes the next, cold-cache
+ *    turn cheap.
  * The segment is a button (`action: 'compact'`): a press runs the real `/compact` through
  * `$.command.run` (the bare word in the chat, `$.session.compact` and `$.prompt.submit('/compact')`
  * are refused by the desktop app). The only compact the mod starts without a press is the
@@ -447,7 +446,6 @@ export function compactSegment(
   if (
     !isTurnRunning &&
     lastActivityMs !== null &&
-    contextPercent >= COMPACT_CACHE_MIN_CONTEXT &&
     cacheMinutesLeft(lastActivityMs, nowMs, settings.cacheTtlMinutes) <=
       cacheThresholds(settings.cacheTtlMinutes).red
   ) {
@@ -464,12 +462,10 @@ export function compactSegment(
 
 /** ... but not with fewer than this many minutes left: a flush started after the expiry would renew nothing. */
 export const GUARD_MIN_MINUTES_LEFT = 2
-/** ... and only for a context at least this full (percent as the app counts it). */
-export const GUARD_MIN_CONTEXT = COMPACT_CACHE_MIN_CONTEXT
 
 /**
  * True when the safeguard should start now: no turn runs, the cache lives at least
- * GUARD_MIN_TTL_MINUTES, the context is at least GUARD_MIN_CONTEXT, and the cache has between
+ * GUARD_MIN_TTL_MINUTES, the context fill is known (any fill counts), and the cache has between
  * GUARD_MIN_MINUTES_LEFT and its red-threshold minutes left (10 of 60). A window whose last
  * activity is unknown never qualifies (it was met mid-idle). The mode is not judged here
  * (`effectiveGuardMode`).
@@ -483,7 +479,7 @@ export function isGuardDue(
 ): boolean {
   if (isTurnRunning || settings.cacheTtlMinutes < GUARD_MIN_TTL_MINUTES) return false
   if (contextPercent === null || !Number.isFinite(contextPercent)) return false
-  if (contextPercent < GUARD_MIN_CONTEXT || lastActivityMs === null) return false
+  if (lastActivityMs === null) return false
   const left = cacheMinutesLeft(lastActivityMs, nowMs, settings.cacheTtlMinutes)
   return left <= cacheThresholds(settings.cacheTtlMinutes).red && left >= GUARD_MIN_MINUTES_LEFT
 }

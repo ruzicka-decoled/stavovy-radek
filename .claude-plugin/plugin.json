@@ -1,6 +1,6 @@
 {
   "name": "stavovy-radek",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Status band above the prompt: model, context fill, prompt cache countdown, 5-hour and weekly limits (numbers from the app), project, worktree, a compact button and an optional safeguard that compacts an idle window before its cache goes cold",
   "author": {
     "name": "ruzicka-decoled",

@@ -581,8 +581,20 @@ describe('compact hint', () => {
     expect(await hintNow($)).toBeUndefined()
   })
 
-  test('from 70 % of the context: yellow hint, red from 80, last on the line', async ($, on) => {
-    await boot($, on, world({ usage: usageOf(70, []) }))
+  test('49 % of the context with a fresh cache: no hint; 50 %: hint', async ($, on) => {
+    await boot($, on, world({ usage: usageOf(49, []) }))
+    await turnDone($)
+    expect(await hintNow($)).toBeUndefined()
+    await $.session.measure({
+      context: { window: 200000, tokens: 100000, percent: 50 },
+      rateLimits: [],
+      changed: ['context'],
+    })
+    expect((await hintNow($))?.text).toBe('→ /compact')
+  })
+
+  test('from 50 % of the context: yellow hint, red from 80, last on the line', async ($, on) => {
+    await boot($, on, world({ usage: usageOf(50, []) }))
     const yellow = await hintNow($)
     expect(yellow?.text).toBe('→ /compact')
     expect(yellow?.props['color']).toBe('warning')
@@ -597,8 +609,8 @@ describe('compact hint', () => {
     expect(red?.props['color']).toBe('error')
   })
 
-  test('with the cache nearly cold and a context of 30 % or more the hint comes, then goes after a turn', async ($, on) => {
-    const clock = await boot($, on, world({ usage: usageOf(40, []) }))
+  test('with the cache nearly cold the hint comes at any fill (3 %), then goes after a turn', async ($, on) => {
+    const clock = await boot($, on, world({ usage: usageOf(3, []) }))
     await turnDone($)
     await clock.advance(49 * MINUTE) // 11 minutes left
     expect(await hintNow($)).toBeUndefined()
@@ -607,6 +619,13 @@ describe('compact hint', () => {
     expect((await hintNow($))?.text).toBe('→ /compact')
 
     await turnDone($) // the cache is renewed
+    expect(await hintNow($)).toBeUndefined()
+  })
+
+  test('with the cache nearly cold and the fill unknown (null): no hint', async ($, on) => {
+    const clock = await boot($, on, world({ usage: usageOf(undefined, []) }))
+    await turnDone($)
+    await clock.advance(55 * MINUTE)
     expect(await hintNow($)).toBeUndefined()
   })
 })
@@ -1272,12 +1291,15 @@ describe('safeguard before the cache runs out', () => {
       expect(seen.ran).toEqual(['compact'])
     })
 
-    test('nothing below 30 % of the context', FLUSH, async ($, on) => {
+    test('a context of only 3 % is flushed too (any fill counts)', FLUSH, async ($, on) => {
       const seen = newSeen()
-      const clock = await boot($, on, world({ app: appUsage({ contextPercent: 25 }) }), engineBeneath(seen))
+      const clock = await boot($, on, world({ app: appUsage({ contextPercent: 3 }) }), engineBeneath(seen))
       await turnDone($)
-      await passMinutes(clock, 55)
+      await passMinutes(clock, 49)
       expect(seen.submits).toEqual([])
+      await passMinutes(clock, 1)
+      expect(seen.submits).toHaveLength(1)
+      expect(seen.submits[0]?.fromPlugin).toBe(true)
     })
 
     test('nothing while a turn runs, however long it lasts', FLUSH, async ($, on) => {
@@ -1355,12 +1377,15 @@ describe('safeguard before the cache runs out', () => {
       expect(seen.ran).toEqual(['compact'])
     })
 
-    test('the same conditions as the flush mode: not below 30 %, not during a turn', COMPACT, async ($, on) => {
+    test('a context of only 3 % is compacted too (any fill counts)', COMPACT, async ($, on) => {
       const seen = newSeen()
-      const clock = await boot($, on, world({ app: appUsage({ contextPercent: 25 }) }), engineBeneath(seen))
+      const clock = await boot($, on, world({ app: appUsage({ contextPercent: 3 }) }), engineBeneath(seen))
       await turnDone($)
-      await passMinutes(clock, 55)
+      await passMinutes(clock, 49)
       expect(seen.ran).toEqual([])
+      await passMinutes(clock, 1)
+      expect(seen.ran).toEqual(['compact'])
+      expect(seen.submits).toEqual([])
     })
 
     test('nothing while a turn runs', COMPACT, async ($, on) => {
